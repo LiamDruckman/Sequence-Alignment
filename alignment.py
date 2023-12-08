@@ -1,7 +1,5 @@
 import sys
 import argparse
-import blosum as bl
-
 
 def main():
     # sequence1 = "TCTGGCGATACTT"
@@ -55,8 +53,9 @@ def main():
 
 # Function to perform the calculation. Returns the score matrix and the predecessor matrix
 def calculate(sequence1, sequence2, gap_penalty, match_score, mismatch_score, local, use_blosum):
-    # import the blosum matrix
+    # import the blosum matrix if necessary
     if use_blosum:
+        import blosum as bl
         scoring_matrix = bl.BLOSUM(62)
 
     # create a matrix of zeros
@@ -77,7 +76,7 @@ def calculate(sequence1, sequence2, gap_penalty, match_score, mismatch_score, lo
     # fill in the rest of the matrix saving where the score could have come from
     for i in range(1, len(sequence1) + 1):
         for j in range(1, len(sequence2) + 1):
-            
+
             # if using a blosum matrix, get the score from the matrix
             if use_blosum:
                 match = matrix[j - 1][i - 1] + scoring_matrix[sequence1[i - 1]][sequence2[j - 1]]
@@ -139,7 +138,7 @@ def print_matrix(matrix, predecessor, sequence1, sequence2, show_arrows):
         for j in range(len(sequence1) + 1):
             prev_line += (diagonal_arrow if "match" in predecessor[i][j] else " ") + " " * (padding - 1) + (up_arrow if "delete" in predecessor[i][j] else " ") + " " * (padding - 1)
             curr_line += (left_arrow if "insert" in predecessor[i][j] else " ") + f"{matrix[i][j]:^{padding * 2 - 1}}"
-            
+
         print(prev_line)
         print(curr_line)
 
@@ -180,7 +179,7 @@ def find_alignment(matrix, predecessor, sequence1, sequence2, local):
             alignment1 = sequence1[i - 1] + alignment1
             alignment2 = "-" + alignment2
             i -= 1
-        
+
     return alignment1, alignment_match, alignment2
 
 
