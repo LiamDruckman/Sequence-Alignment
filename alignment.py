@@ -1,3 +1,5 @@
+#!/usr/bin/python3
+
 import sys
 import argparse
 import blosum as bl
@@ -36,21 +38,22 @@ def main():
     if show_matrix:
         print_matrix(matrix, predecessor, sequence1, sequence2, show_arrows)
 
+    alignments = find_alignment(matrix, predecessor, sequence1, sequence2, local)
+
     if show_alignment:
-        # find the alignment
-        alignment1, alignment_match, alignment2 = find_alignment(matrix, predecessor, sequence1, sequence2, local)
+        # print all alignments
+        for i, alignment in enumerate(alignments):
+            alignment1, alignment_match, alignment2 = alignment
+            spacing = "\t" * 3
+            print(f"Alignment {i+1}:")
+            print(spacing + alignment1)
+            print(spacing + alignment_match)
+            print(spacing + alignment2)
+            print()
 
-        # print the alignment
-        spacing = "\t" * 3
-        print("Alignment:")
-        print(spacing + alignment1)
-        print(spacing + alignment_match)
-        print(spacing + alignment2)
-        print()
-
-        if show_score:
-            # print the score and percentage identity
-            print_score(matrix, alignment_match, local)
+            if show_score:
+                # print the score and percentage identity
+                print_score(matrix, alignment_match, local)
 
 
 # Function to perform the calculation. Returns the score matrix and the predecessor matrix
@@ -148,40 +151,31 @@ def print_matrix(matrix, predecessor, sequence1, sequence2, show_arrows):
 
 # Function to find the alignment. Returns the alignment
 def find_alignment(matrix, predecessor, sequence1, sequence2, local):
-    alignment1 = ""
-    alignment_match = ""
-    alignment2 = ""
+    alignments = []
+    
+    def dfs(i, j, alignment1, alignment_match, alignment2):
+        nonlocal alignments
 
-    # Local alignment starts at the highest value in the matrix
-    # Choose the last one if there are multiple
+        if (i == 0 and j == 0) or (local and matrix[j][i] == 0.0):
+            alignments.append((alignment1[::-1], alignment_match[::-1], alignment2[::-1]))
+            return
+
+        if "match" in predecessor[j][i]:
+            dfs(i - 1, j - 1, alignment1 + sequence1[i - 1], alignment_match + ("|" if sequence1[i - 1] == sequence2[j - 1] else " "), alignment2 + sequence2[j - 1])
+        if "delete" in predecessor[j][i]:
+            dfs(i, j - 1, alignment1 + "-", alignment_match + " ", alignment2 + sequence2[j - 1])
+        if "insert" in predecessor[j][i]:
+            dfs(i - 1, j, alignment1 + sequence1[i - 1], alignment_match + " ", alignment2 + "-")
+
     if local:
         top_score = max(map(max, matrix))
         coordinates = [(i, j) for i in range(len(matrix)) for j in range(len(matrix[i])) if matrix[i][j] == top_score]
-        j, i = coordinates[-1]
-
-    # Global alignment starts at the end of the matrix
+        for (i, j) in coordinates:
+            dfs(i, j, "", "", "")
     else:
-        i = len(sequence1)
-        j = len(sequence2)
+        dfs(len(sequence1), len(sequence2), "", "", "")
 
-    while (i > 0 or j > 0) and len(predecessor[j][i]) > 0:
-        alignment_match = ("|" if sequence1[i - 1] == sequence2[j - 1] else " ") + alignment_match
-
-        if "match" in predecessor[j][i]:
-            alignment1 = sequence1[i - 1] + alignment1
-            alignment2 = sequence2[j - 1] + alignment2
-            i -= 1
-            j -= 1
-        elif "delete" in predecessor[j][i]:
-            alignment1 = "-" + alignment1
-            alignment2 = sequence2[j - 1] + alignment2
-            j -= 1
-        elif "insert" in predecessor[j][i]:
-            alignment1 = sequence1[i - 1] + alignment1
-            alignment2 = "-" + alignment2
-            i -= 1
-        
-    return alignment1, alignment_match, alignment2
+    return alignments
 
 
 # Function to calculate and print the score and percentage identity of the alignment
